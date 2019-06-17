@@ -16,10 +16,18 @@ description = "General matrix multiplication for f32 and f64 matrices. Operates 
 keywords = ["matrix", "sgemm", "dgemm"]
 categories = ["science"]
 
-exclude = ["docs/*"]
+exclude = ["docs/*", "/sgx/*"]
 
 [lib]
 bench = false
+
+[features]
+default = ["mesalock_sgx", "fallback"]
+mesalock_sgx = ["sgx_tstd"]
+fma = []
+avx = []
+sse = []
+fallback = [] # fallback is significantly faster in small matrix multiply
 
 [[bench]]
 name = "benchmarks"
@@ -27,6 +35,7 @@ harness = false
 
 [dependencies]
 rawpointer = "0.2"
+sgx_tstd = { rev = "v1.0.9", git = "https://github.com/baidu/rust-sgx-sdk.git", optional = true }
 
 [dev-dependencies]
 bencher = "0.1.2"
