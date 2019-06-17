@@ -11,19 +11,20 @@ use kernel::GemmSelect;
 use kernel::{U4, U8};
 use archparam;
 
+use x86::FusedMulAdd;
 
 #[cfg(target_arch="x86")]
-use std::arch::x86::*;
+use core::arch::x86::*;
 #[cfg(target_arch="x86_64")]
-use std::arch::x86_64::*;
-#[cfg(any(target_arch="x86", target_arch="x86_64"))]
-use x86::{FusedMulAdd, AvxMulAdd, SMultiplyAdd};
+use core::arch::x86_64::*;
+//#[cfg(any(target_arch="x86", target_arch="x86_64"))]
+use x86::{AvxMulAdd, SMultiplyAdd};
 
-#[cfg(any(target_arch="x86", target_arch="x86_64"))]
+//#[cfg(any(target_arch="x86", target_arch="x86_64"))]
 struct KernelAvx;
-#[cfg(any(target_arch="x86", target_arch="x86_64"))]
+//#[cfg(any(target_arch="x86", target_arch="x86_64"))]
 struct KernelFma;
-#[cfg(any(target_arch="x86", target_arch="x86_64"))]
+//#[cfg(any(target_arch="x86", target_arch="x86_64"))]
 struct KernelSse2;
 struct KernelFallback;
 
@@ -37,25 +38,29 @@ type T = f32;
 #[inline]
 pub(crate) fn detect<G>(selector: G) where G: GemmSelect<T> {
     // dispatch to specific compiled versions
-    #[cfg(any(target_arch="x86", target_arch="x86_64"))]
-    {
-        if is_x86_feature_detected_!("fma") {
-            return selector.select(KernelFma);
-        } else if is_x86_feature_detected_!("avx") {
-            return selector.select(KernelAvx);
-        } else if is_x86_feature_detected_!("sse2") {
-            return selector.select(KernelSse2);
-        }
-    }
+    //#[cfg(any(target_arch="x86", target_arch="x86_64"))]
+    //{
+    //    if is_x86_feature_detected_!("fma") {
+    #[cfg(feature = "fma")]
+    return selector.select(KernelFma);
+    //    } else if is_x86_feature_detected_!("avx") {
+    #[cfg(feature = "avx")]
+    return selector.select(KernelAvx);
+    //    } else if is_x86_feature_detected_!("sse2") {
+    #[cfg(feature = "sse")]
+    return selector.select(KernelSse2);
+    //    }
+    //}
+    #[cfg(feature = "fallback")]
     return selector.select(KernelFallback);
 }
 
-#[cfg(any(target_arch="x86", target_arch="x86_64"))]
+//#[cfg(any(target_arch="x86", target_arch="x86_64"))]
 macro_rules! loop_m { ($i:ident, $e:expr) => { loop8!($i, $e) }; }
-#[cfg(test)]
-macro_rules! loop_n { ($j:ident, $e:expr) => { loop8!($j, $e) }; }
+//#[cfg(test)]
+//macro_rules! loop_n { ($j:ident, $e:expr) => { loop8!($j, $e) }; }
 
-#[cfg(any(target_arch="x86", target_arch="x86_64"))]
+//#[cfg(any(target_arch="x86", target_arch="x86_64"))]
 impl GemmKernel for KernelAvx {
     type Elem = T;
 
@@ -87,7 +92,7 @@ impl GemmKernel for KernelAvx {
     }
 }
 
-#[cfg(any(target_arch="x86", target_arch="x86_64"))]
+//#[cfg(any(target_arch="x86", target_arch="x86_64"))]
 impl GemmKernel for KernelFma {
     type Elem = T;
 
@@ -119,7 +124,7 @@ impl GemmKernel for KernelFma {
     }
 }
 
-#[cfg(any(target_arch="x86", target_arch="x86_64"))]
+//#[cfg(any(target_arch="x86", target_arch="x86_64"))]
 impl GemmKernel for KernelSse2 {
     type Elem = T;
 
@@ -183,8 +188,8 @@ impl GemmKernel for KernelFallback {
 }
 
 // no inline for unmasked kernels
-#[cfg(any(target_arch="x86", target_arch="x86_64"))]
-#[target_feature(enable="fma")]
+//#[cfg(any(target_arch="x86", target_arch="x86_64"))]
+//#[target_feature(enable="fma")]
 unsafe fn kernel_target_fma(k: usize, alpha: T, a: *const T, b: *const T,
                             beta: T, c: *mut T, rsc: isize, csc: isize)
 {
@@ -192,8 +197,8 @@ unsafe fn kernel_target_fma(k: usize, alpha: T, a: *const T, b: *const T,
 }
 
 // no inline for unmasked kernels
-#[cfg(any(target_arch="x86", target_arch="x86_64"))]
-#[target_feature(enable="avx")]
+//#[cfg(any(target_arch="x86", target_arch="x86_64"))]
+//#[target_feature(enable="avx")]
 unsafe fn kernel_target_avx(k: usize, alpha: T, a: *const T, b: *const T,
                             beta: T, c: *mut T, rsc: isize, csc: isize)
 {
@@ -201,8 +206,8 @@ unsafe fn kernel_target_avx(k: usize, alpha: T, a: *const T, b: *const T,
 }
 
 #[inline]
-#[cfg(any(target_arch="x86", target_arch="x86_64"))]
-#[target_feature(enable="sse2")]
+//#[cfg(any(target_arch="x86", target_arch="x86_64"))]
+//#[target_feature(enable="sse2")]
 unsafe fn kernel_target_sse2(k: usize, alpha: T, a: *const T, b: *const T,
                              beta: T, c: *mut T, rsc: isize, csc: isize)
 {
@@ -210,7 +215,7 @@ unsafe fn kernel_target_sse2(k: usize, alpha: T, a: *const T, b: *const T,
 }
 
 #[inline(always)]
-#[cfg(any(target_arch="x86", target_arch="x86_64"))]
+//#[cfg(any(target_arch="x86", target_arch="x86_64"))]
 unsafe fn kernel_x86_avx<MA>(k: usize, alpha: T, a: *const T, b: *const T,
                              beta: T, c: *mut T, rsc: isize, csc: isize)
     where MA: SMultiplyAdd,

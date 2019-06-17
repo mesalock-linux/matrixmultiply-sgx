@@ -65,6 +65,21 @@
 
 #![doc(html_root_url = "https://docs.rs/matrixmultiply/0.2/")]
 
+#![feature(allocator_api)]
+#![cfg_attr(all(feature = "mesalock_sgx",
+                not(target_env = "sgx")), no_std)]
+#![cfg_attr(all(target_env = "sgx", target_vendor = "mesalock"), feature(rustc_private))]
+#![allow(dead_code)]
+#![deny(unreachable_code)]
+
+#[cfg(all(feature = "mesalock_sgx", not(target_env = "sgx")))]
+#[macro_use]
+extern crate sgx_tstd as std;
+extern crate alloc as alloc_crate;
+
+#[cfg(all(feature = "mesalock_sgx", target_env = "sgx"))]
+extern crate core;
+
 extern crate rawpointer;
 
 #[macro_use] mod debugmacros;

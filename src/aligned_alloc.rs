@@ -1,7 +1,7 @@
 
-use std::alloc;
-use std::alloc::{Layout, handle_alloc_error};
-use std::{mem, cmp};
+//use core::alloc;
+use alloc_crate::alloc::{Layout, handle_alloc_error};
+use core::{mem, cmp};
 
 #[cfg(test)]
 use std::ops::{Deref, DerefMut};
@@ -19,7 +19,7 @@ impl<T> Alloc<T> {
         #[cfg(not(debug_assertions))]
         let layout = Layout::from_size_align_unchecked(mem::size_of::<T>() * nelem, align);
         dprint!("Allocating nelem={}, layout={:?}", nelem, layout);
-        let ptr = alloc::alloc(layout);
+        let ptr = alloc_crate::alloc::alloc(layout);
         if ptr.is_null() {
             handle_alloc_error(layout);
         }
@@ -47,7 +47,7 @@ impl<T> Drop for Alloc<T> {
     fn drop(&mut self) {
         unsafe {
             let layout = Layout::from_size_align_unchecked(mem::size_of::<T>() * self.len, self.align);
-            alloc::dealloc(self.ptr as _, layout);
+            alloc_crate::alloc::dealloc(self.ptr as _, layout);
         }
     }
 }
